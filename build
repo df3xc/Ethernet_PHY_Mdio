@@ -1,0 +1,3 @@
+#!/bin/sh
+gcc src/main.c src/mdio.c src/cmdline.c /lib/libgpiommap.a -o main
+
