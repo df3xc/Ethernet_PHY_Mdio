@@ -255,7 +255,7 @@ void mdioWritePreamble()
  - value   : value written to register
 
 *******************************************************************/
-//
+
 
 void mdioWriteRegister(uint phyAddr, uint regAddr, uint value )
 
@@ -289,7 +289,7 @@ void mdioWriteRegister(uint phyAddr, uint regAddr, uint value )
  \return  :  register value
 
 *******************************************************************/
-//
+
 
 uint mdioReadRegister(uint phyAddr, uint regAddr )
 
