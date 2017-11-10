@@ -1,4 +1,11 @@
 
+/**
+ * \file  main.c
+ *
+ * \brief the main is the mains is the main ....
+ */
+
+
 #include <stdio.h>
 #include <string.h>
 #include "gpio.h"
@@ -26,15 +33,15 @@ int testCmdLine (int argc, char *argv[]);
 
 int selectMdioPins  (int argc, char *argv[]);
 
-int readEthPhyRegister  (int argc, char *argv[]);
+int readEthPhyRegister   (int argc, char *argv[]);
 int writeEthPhyRegister  (int argc, char *argv[]);
-int dumpEthPhyRegister  (int argc, char *argv[]);
+int dumpEthPhyRegister   (int argc, char *argv[]);
 int displayEthPhyRegister(int argc, char *argv[]);
 int dispatchEthPhyRegister  (int argc, char *argv[]);
-int probePhyAddress (int argc, char *argv[]);
-int setTestMode  (int argc, char *argv[]);
-int mdioTest (int argc, char *argv[]);
-int testInput(int argc, char *argv[]);
+int probePhyAddress      (int argc, char *argv[]);
+int setTestMode          (int argc, char *argv[]);
+int mdioTest             (int argc, char *argv[]);
+int testInput            (int argc, char *argv[]);
 
 
 /*****************************************************************************
@@ -47,7 +54,7 @@ phy_reg_struct phy_regs[20] =
 {0, "Basic control                  "},
 {1, "Basic status                   "},
 {2, "PHY IDENTIFIER 1               "},
-{3, "PHY IDENTIFIER 1               "},
+{3, "PHY IDENTIFIER 2               "},
 {4, "AUTO NEG ADVERTISEMENT         "},
 {5, "AUTO NEG LINK PARTNER ABILITY  "},
 {6, "AUTO NEG EXPANSION             "},
@@ -59,18 +66,18 @@ phy_reg_struct phy_regs[20] =
 tCmdLineEntry globalCmdTable[] =
 {
   {"help",        help,                   "provide help"},
-  {"testCmdLine", testCmdLine,            "test command line processing"},
-  {"dp",          dumpEthPhyRegister,     "dump Ethernet PHY register 0..31"},
-  {"wp",          writeEthPhyRegister,    "write Ethernet PHY register , value"},
-  {"rp",          readEthPhyRegister,     "read Ethernet PHY register"},
+  {"cmdline",     testCmdLine,            "test command line processing"},
+  {"dump",        dumpEthPhyRegister,     "dump Ethernet PHY register 0..31"},
+  {"disp",        displayEthPhyRegister,  "display Ethernet PHY register"},
+  {"wp",          writeEthPhyRegister,    "write Ethernet PHY <register> <value>"},
+  {"rp",          readEthPhyRegister,     "read Ethernet PHY <register>"},
   {"sta",         dispatchEthPhyRegister, "display Ethernet PHY status"},
-  {"pins",        selectMdioPins,         "1: local PHY, 0: external PHY"},
-  {"tmode",       setTestMode,            "enable PHY test mode 0..6"},
-  {"rep",         mdioTest ,              "repeat read register 0"},
-  {"ti",          testInput ,             "P8_14 as input, USR as output"},
+  {"probe",       probePhyAddress ,       "search for PHYs at adress 0..32"},
+  {"pins",        selectMdioPins,         "<0> local PHY, <1> external PHY"},
+  {"tmode",       setTestMode,            "enable PHY test mode <0..6>"},
+  {"rep",         mdioTest ,              "repeat read <register>"},
+  {"tin",         testInput ,             "GPIO as input, USR1 Led as output"},
   {0,0,0}
-
-
 };
 
 unsigned int PHY_Address = 0;
@@ -79,27 +86,36 @@ unsigned int PHY_Address = 0;
 **                INTERNAL FUNCTION DEFINITIONS
 *****************************************************************************/
 
+
+/***************************************************************//**
+** \brief Low level test : set USR1 Led according to input pin state.
+*******************************************************************/
+
 int testInput(int argc, char *argv[])
 
 {
+PIN p;
+
+p = P8_13;
+
+printf("\n\r set %s as input",p.name);
+digitalInput(p);
+
 while(1)
   {
-    digitalInput(P8_13);
-    digitalWrite(USR1,digitalRead(P8_13));
-    
-    digitalWrite(USR3,1);
-    usleep(50000);
-    
-    digitalWrite(USR3,0);
-    usleep(50000);    
-    
-  }
+    digitalWrite(USR1,digitalRead(p));
 
+    digitalWrite(USR3,1);
+    usleep(90000);
+
+    digitalWrite(USR3,0);
+    usleep(90000);
+ }
 }
 
-/*
-** Print help
-*/
+/***************************************************************//**
+* \brief Print help
+*******************************************************************/
 
 
 int help (int argc, char *argv[])
@@ -108,6 +124,8 @@ int help (int argc, char *argv[])
     tCmdLineEntry *pCmdEntry = &globalCmdTable[0];
 
     printf("\n\r ----------------------- HELP ------------------------");
+    printf("\n\r <...> are the command line parameters");
+    printf("\n\r");
 
     while(pCmdEntry->pcCmd)
     {
@@ -119,7 +137,9 @@ int help (int argc, char *argv[])
 
 }
 
-
+/***************************************************************//**
+ \brief select MDIO pins
+*******************************************************************/
 int selectMdioPins  (int argc, char *argv[])
 
 {
@@ -132,6 +152,17 @@ int selectMdioPins  (int argc, char *argv[])
     mdioSelectPins(selection);
 
 }
+
+
+/***************************************************************//**
+ *  \brief set Address of the PHY
+ *
+ * \param
+ *
+ * \return Returns
+ * \b
+ * \b CMDLINE_TOO_MANY_ARGS if there are more arguments than can be parsed.
+ *******************************************************************/
 
 int setPhyAddress (int argc, char *argv[])
 {
@@ -147,18 +178,22 @@ int setPhyAddress (int argc, char *argv[])
 
 }
 
-/*
-** List PHY Register Names
-*/
+/****************************************************************//**
+ * \brief List PHY Register Names
+ * \param
+ *
+ * \return Returns
+ * \b
+ * \b comment
+********************************************************************/
 
 void listRegisterNames()
-
 {
 int k = 0;
 
-while(phy_regs[k].id!=999)
+while(phy_regs[k].addr!=999)
     {
-        printf ("\n\r id %d  : name %s",phy_regs[k].id,phy_regs[k].name);
+        printf ("\n\r addr %d  : name %s",phy_regs[k].addr,phy_regs[k].name);
         k++;
     }
 printf ("\n\r");
@@ -193,10 +228,17 @@ int testCmdLine (int argc, char *argv[])
     return(0);
 }
 
+
+/***************************************************************//**
+*  \brief mdio test : repeat reading PHY register
+*******************************************************************/
+
 int mdioTest (int argc, char *argv[])
 {
     int val;
     int mdioReg = 0;
+
+    mdioReg = atoi(argv[1]);
 
     while(1)
     {
@@ -208,9 +250,9 @@ int mdioTest (int argc, char *argv[])
 }
 
 
-/*
-** write Ethernet PHY register
-*/
+/***************************************************************//**
+*  \brief write Ethernet PHY register
+*******************************************************************/
 
 int writeEthPhyRegister  (int argc, char *argv[])
 
@@ -235,9 +277,9 @@ int writeEthPhyRegister  (int argc, char *argv[])
     return(0);
 }
 
-/*
-** read Ethernet PHY register
-*/
+/***************************************************************//**
+*  \brief read Ethernet PHY register
+*******************************************************************/
 
 int readEthPhyRegister  (int argc, char *argv[])
 
@@ -256,9 +298,9 @@ int readEthPhyRegister  (int argc, char *argv[])
 }
 
 
-/*
-** read Ethernet PHY register
-*/
+/***************************************************************//**
+*  \brief read Ethernet PHY register
+*******************************************************************/
 
 int dumpEthPhyRegister  (int argc, char *argv[])
 
@@ -281,6 +323,11 @@ int dumpEthPhyRegister  (int argc, char *argv[])
 
 }
 
+/***************************************************************//**
+*
+*  \brief Display PHY register
+*
+*******************************************************************/
 int displayEthPhyRegister(int argc, char *argv[])
 {
 
@@ -304,19 +351,19 @@ unsigned int mdioReg;
         }
 
 
-while(phy_regs[k].id!=999)
+while(phy_regs[k].addr!=999)
     {
         mdioReg = mdioReadRegister(0,k);
-        printf("\n\r PHY Reg %d  \t%s = 0x%.4X",phy_regs[k].id,phy_regs[k].name,mdioReg);
+        printf("\n\r PHY Reg %d  \t%s = 0x%.4X",phy_regs[k].addr,phy_regs[k].name,mdioReg);
         k++;
     }
 printf ("\n\r");
 
 }
 
-/******************************************************************************
- * Ethernet Status Report
-******************************************************************************/
+/***************************************************************//**
+ *  \brief Ethernet Status Report
+********************************************************************/
 
 int dispatchEthPhyRegister  (int argc, char *argv[])
 
@@ -359,6 +406,10 @@ int dispatchEthPhyRegister  (int argc, char *argv[])
 
 }
 
+/***************************************************************//**
+*  \brief probe for PHY
+*******************************************************************/
+
 int probePhyAddress (int argc, char *argv[])
 {
     unsigned int  k = 0;
@@ -369,8 +420,17 @@ int probePhyAddress (int argc, char *argv[])
 
     for (k=0;k<32;k++)
         {
-        mdioReg = mdioReadRegister(k,0);
-        printf("\n\r PHY Address %d Reg 0x%.4X",k,mdioReg);
+            mdioReg = mdioReadRegister(k,0);
+            printf("\n\r PHY Address %.2d Reg 0x%.4X",k,mdioReg);
+
+            if ((mdioReg==0x0000) || (mdioReg == 0xFFFF))
+            {
+                printf(" --- " );
+            }
+            else
+            {
+                 printf(" PHY FOUND " );
+            }
         }
 
     digitalWrite(P8_19,0);
@@ -380,9 +440,9 @@ int probePhyAddress (int argc, char *argv[])
 
 }
 
-/******************************************************************************
- * Set PHY test mode
-******************************************************************************/
+/***************************************************************//**
+ *  \brief Set PHY test mode
+********************************************************************/
 
 
 int setTestMode  (int argc, char *argv[])
@@ -416,9 +476,9 @@ int setTestMode  (int argc, char *argv[])
 }
 
 
-/*
-** The main function. Application starts here.
-*/
+/***************************************************************//**
+*  \brief The main function. Application starts here.
+*******************************************************************/
 int main(int argc, char *argv[])
 
 {
@@ -444,14 +504,14 @@ int main(int argc, char *argv[])
     {
         k=0;
         printf("\n\r->");
-        
+
         while((ch = getchar()) != '\n')
         {
             cmdline[k] = ch;
             k++;
         }
        cmdline[k]='\0';
-        
+
         //fgets(cmdline,20,stdin);
         printf("CMD Line: <%s>",cmdline);
         CmdLineProcess(cmdline);
@@ -461,7 +521,8 @@ int main(int argc, char *argv[])
 
 }
 
-
+/***************************************************************//**
+*******************************************************************/
 
 void setupGpioPins()
 

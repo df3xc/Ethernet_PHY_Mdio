@@ -14,8 +14,9 @@
 
 typedef struct
 {
-    int id;
-    char name[60];
+
+    int addr;      /*!< register address */
+    char name[60]; /*!< register name */
 }
 phy_reg_struct;
 

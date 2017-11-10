@@ -1,17 +1,32 @@
 
+/**
+ * \file  mdio.c
+ *
+ * \brief Write and read PHY registers via MDIO and MDC.
+ */
+
 #include <stdio.h>
 #include <unistd.h>
 #include "main.h"
 #include "gpio.h"
 #include "mdio.h"
 
-
+/**
+ * \addtogroup mdio_api
+ * @{
+ */
 
 
 PIN MDC_Pin = MDC;
 PIN MDIO_Pin = MDIO;
 
-
+/***************************************************************//**
+ *  \brief select GPIOs used as MDIO and MDC
+ *
+ * \param
+ * 0 : access on-board PHY via MDC and MDIO pins
+ * 1 : access external PHY via Port 8 pins
+*******************************************************************/
 
 void mdioSelectPins(int selection)
 
@@ -28,7 +43,7 @@ if (selection==0)
     {
         printf("\n\r access external PHY via Port 8 pins");
 
-        MDC_Pin = P8_14;  
+        MDC_Pin = P8_14;
         MDIO_Pin = P8_13;
 
         printf("\n\r MDC  : %s",MDC_Pin.name);
@@ -38,7 +53,7 @@ if (selection==0)
 
 
 /***************************************************************//**
- \brief init MDIO and MDC as output
+  \brief init MDIO and MDC as output
 *******************************************************************/
 
 void mdioInit()
@@ -66,7 +81,7 @@ void mdioInput()
 }
 
 /***************************************************************//**
- \brief set MDIO data pin 1 or 0
+  \brief set MDIO data pin 1 or 0
 *******************************************************************/
 
 void setMdioPin(uint value)
@@ -84,7 +99,7 @@ else
 }
 
 /***************************************************************//**
- \brief set MDC Clock pin 1 or 0
+  \brief set MDC Clock pin 1 or 0
 *******************************************************************/
 
 void setMdcPin(uint value)
@@ -103,6 +118,9 @@ else
 
 /***************************************************************//**
  \brief MDC clock cycle
+
+ clock set to 0,1,1,0 is a sequence
+
 *******************************************************************/
 
 void mdcClock()
@@ -117,7 +135,7 @@ void mdcClock()
 }
 
 /***************************************************************//**
- \brief write data using GPIO pins MDIO and MDC
+  \brief write data using GPIO pins MDIO and MDC
 *******************************************************************/
 
 void mdioWrite(uint data)
@@ -137,11 +155,11 @@ for (i=0;i<32;i++)
      mdcClock();
      data = data << 1;
     }
-  mdcClock();
+  mdcClock(); /* FIXME : is this additional clock needed */
 }
 
 /***************************************************************//**
- \brief write data using GPIO pins MDIO and MDC
+  \brief read data using GPIO pins MDIO and MDC
 *******************************************************************/
 
 uint mdioRead(uint data)
@@ -193,13 +211,11 @@ for (i=0;i<14;i++)
 
 
  mdioInit();
- mdcClock();
+ mdcClock(); /* FIXME : is this additional clock needed */
+ phyRegister = phyRegister >> 1;
 
-phyRegister = phyRegister >> 1;
-
-setMdioPin(1);
-
-usleep(500);
+  setMdioPin(1);
+  usleep(500);
 
 //ConsoleUtilsPrintf(" result: 0x%04X",phyRegister );
 
@@ -209,7 +225,7 @@ return(phyRegister);
 
 
 /***************************************************************//**
- \brief write MDIO preamble (32 time MDIO = 1)
+  \brief write MDIO preamble (32 time MDIO = 1)
 *******************************************************************/
 
 
@@ -234,9 +250,9 @@ void mdioWritePreamble()
 /***************************************************************//**
  \brief write PHY register
 
- - phyAddr
- - regAddr
- - value   :  value written to register
+ - phyAddr : address of the PHY
+ - regAddr : address of the register
+ - value   : value written to register
 
 *******************************************************************/
 //
@@ -262,11 +278,15 @@ void mdioWriteRegister(uint phyAddr, uint regAddr, uint value )
 }
 
 /***************************************************************//**
- \brief read PHY register
+  \brief read PHY register
 
- - phyAddr
- - regAddr
- - return   :  value from register
+
+ \param
+ - phyAddr : address of the PHY
+ - regAddr : address of the register
+
+
+ \return  :  register value
 
 *******************************************************************/
 //
@@ -291,5 +311,7 @@ uint mdioReadRegister(uint phyAddr, uint regAddr )
     return(value);
 }
 
+/* Close the Doxygen group. */
+/** @} */
 
 
