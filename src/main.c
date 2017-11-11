@@ -31,16 +31,18 @@ void setupGpioPins();
 int help (int argc, char *argv[]);
 int testCmdLine (int argc, char *argv[]);
 
-int selectMdioPins  (int argc, char *argv[]);
-
+int selectMdioPins       (int argc, char *argv[]);
+int enableWriteSmi       (int argc, char *argv[]);
 int readEthPhyRegister   (int argc, char *argv[]);
 int writeEthPhyRegister  (int argc, char *argv[]);
 int dumpEthPhyRegister   (int argc, char *argv[]);
 int displayEthPhyRegister(int argc, char *argv[]);
 int dispatchEthPhyRegister  (int argc, char *argv[]);
+int setPhyAddress        (int argc, char *argv[]);
 int probePhyAddress      (int argc, char *argv[]);
 int setTestMode          (int argc, char *argv[]);
-int mdioTest             (int argc, char *argv[]);
+int mdioReadTest         (int argc, char *argv[]);
+int mdioWriteTest        (int argc, char *argv[]);
 int testInput            (int argc, char *argv[]);
 
 
@@ -59,7 +61,8 @@ phy_reg_struct phy_regs[20] =
 {5, "AUTO NEG LINK PARTNER ABILITY  "},
 {6, "AUTO NEG EXPANSION             "},
 {17,"MODE CONTROL/STATUS            "},
-{18,"Basic status register          "},
+{18,"Basic status                   "},
+{23,"Communication status           "},
 {999,""},
 };
 
@@ -67,6 +70,8 @@ tCmdLineEntry globalCmdTable[] =
 {
   {"help",        help,                   "provide help"},
   {"cmdline",     testCmdLine,            "test command line processing"},
+  {"padr",        setPhyAddress,          "set PHY <address>"},
+  {"swe",         enableWriteSmi,         "enable SWI write "},
   {"dump",        dumpEthPhyRegister,     "dump Ethernet PHY register 0..31"},
   {"disp",        displayEthPhyRegister,  "display Ethernet PHY register"},
   {"wp",          writeEthPhyRegister,    "write Ethernet PHY <register> <value>"},
@@ -75,7 +80,8 @@ tCmdLineEntry globalCmdTable[] =
   {"probe",       probePhyAddress ,       "search for PHYs at adress 0..32"},
   {"pins",        selectMdioPins,         "<0> local PHY, <1> external PHY"},
   {"tmode",       setTestMode,            "enable PHY test mode <0..6>"},
-  {"rep",         mdioTest ,              "repeat read <register>"},
+  {"rep",         mdioReadTest ,          "repeat read <register>"},
+  {"wep",         mdioWriteTest ,         "repeat write <register> <value> "},
   {"tin",         testInput ,             "GPIO as input, USR1 Led as output"},
   {0,0,0}
 };
@@ -94,23 +100,7 @@ unsigned int PHY_Address = 0;
 int testInput(int argc, char *argv[])
 
 {
-PIN p;
-
-p = P8_13;
-
-printf("\n\r set %s as input",p.name);
-digitalInput(p);
-
-while(1)
-  {
-    digitalWrite(USR1,digitalRead(p));
-
-    digitalWrite(USR3,1);
-    usleep(90000);
-
-    digitalWrite(USR3,0);
-    usleep(90000);
- }
+mdioTestInput();
 }
 
 /***************************************************************//**
@@ -151,6 +141,8 @@ int selectMdioPins  (int argc, char *argv[])
 
     mdioSelectPins(selection);
 
+    mdioInit();
+
 }
 
 
@@ -161,7 +153,6 @@ int selectMdioPins  (int argc, char *argv[])
  *
  * \return Returns
  * \b
- * \b CMDLINE_TOO_MANY_ARGS if there are more arguments than can be parsed.
  *******************************************************************/
 
 int setPhyAddress (int argc, char *argv[])
@@ -199,9 +190,9 @@ while(phy_regs[k].addr!=999)
 printf ("\n\r");
 }
 
-/*
-** Just test command line processing
-*/
+/****************************************************************//**
+* Just test command line processing
+********************************************************************/
 
 int testCmdLine (int argc, char *argv[])
 {
@@ -233,19 +224,76 @@ int testCmdLine (int argc, char *argv[])
 *  \brief mdio test : repeat reading PHY register
 *******************************************************************/
 
-int mdioTest (int argc, char *argv[])
+int mdioReadTest (int argc, char *argv[])
 {
     int val;
     int mdioReg = 0;
+
+    printf("\n\r MDIO test");
+
+    if(argc<2) {
+        printf("\n\r ERROR : missing arguments ");
+    return(-1);
+    }
 
     mdioReg = atoi(argv[1]);
 
     while(1)
     {
-    val = mdioReadRegister(PHY_Address,mdioReg);
-    printf("\n\r read PHY Register %d = 0x%.4X \n\r",mdioReg,val);
-    usleep(15000);
+        val = mdioReadRegister(PHY_Address,mdioReg);
+        printf("\n\r read PHY Register %d = 0x%.4X \n\r",mdioReg,val);
+        usleep(5000);
     }
+
+    return(0);
+}
+
+
+/***************************************************************//**
+*  \brief mdio test : repeat write PHY register
+*******************************************************************/
+
+int mdioWriteTest (int argc, char *argv[])
+{
+    int val;
+    int mdioReg = 0;
+
+    printf("\n\r MDIO test");
+
+    if(argc<3) {
+        printf("\n\r ERROR : missing arguments ");
+    return(-1);
+    }
+
+
+    mdioReg = atoi(argv[1]);
+    sscanf(argv[2],"%X",&val);
+
+    while(1)
+    {
+        mdioWriteRegister(PHY_Address,mdioReg,val);
+        printf("\n\r write PHY Register %d = 0x%.4X \n\r",mdioReg,val);
+        usleep(5000);
+    }
+
+    return(0);
+}
+
+/***************************************************************//**
+*  \brief enable SMI write access
+*******************************************************************/
+
+int enableWriteSmi (int argc, char *argv[])
+
+{
+    unsigned int val = 0;
+    unsigned int mdioReg = 0;
+
+    printf("\n\r enable SMI write register");
+
+    val = mdioReadRegister(PHY_Address,MCS);
+    val = val | 0x4;
+    mdioWriteRegister(PHY_Address,MCS,val);
 
 }
 
@@ -260,7 +308,10 @@ int writeEthPhyRegister  (int argc, char *argv[])
     unsigned int val = 0;
     unsigned int mdioReg = 0;
 
-    if(argc<2) return(1);
+    if(argc<3) {
+        printf("\n\r ERROR : missing arguments ");
+    return(-1);
+    }
 
 	mdioReg = atoi(argv[1]);
 
@@ -270,7 +321,7 @@ int writeEthPhyRegister  (int argc, char *argv[])
     printf("\n\r write PHY Register %d = 0x%X",mdioReg,val);
 	mdioWritePreamble();
     mdioWriteRegister(PHY_Address,mdioReg,val);
-
+    usleep(20000);
     val = mdioReadRegister(PHY_Address,mdioReg);
     printf("\n\r read PHY Register %d = 0x%X \n\r",mdioReg,val);
 
@@ -287,7 +338,10 @@ int readEthPhyRegister  (int argc, char *argv[])
     unsigned int val = 0;
     unsigned int mdioReg = 0;
 
-    if(argc<2) return(1);
+    if(argc<2) {
+        printf("\n\r ERROR : missing arguments ");
+    return(-1);
+    }
 
     mdioReg= atoi(argv[1]);
 
@@ -313,7 +367,7 @@ int dumpEthPhyRegister  (int argc, char *argv[])
 
     for (k=0;k<32;k++)
         {
-        mdioReg = mdioReadRegister(0,k);
+        mdioReg = mdioReadRegister(PHY_Address,k);
         printf("\n\r PHY Reg %d = 0x%.4X",k,mdioReg);
         }
 
@@ -333,27 +387,26 @@ int displayEthPhyRegister(int argc, char *argv[])
 
 int k = 0;
 int val = 0;
-unsigned int mdioReg;
+volatile unsigned int mdioReg;
 
 
-        val = mdioReadRegister(0,PHY_ID2);
-        printf("\n\r 0x%.4X val \n\r",val);
+val = mdioReadRegister(PHY_Address,PHY_ID2);
+printf("\n\r 0x%.4X val \n\r",val);
 
-        if ((val==0x0000) || (val == 0xFFFF))
-        {
-         printf("\n\r ------------- ERROR ------------ ");
-         printf("\n\r Cannot read PHY ID register      ");
-         printf("\n\r Check cabling and power supply   ");
-         printf("\n\r -------------------------------- ");
-         printf("\n\r");
-
-         return(-1);
-        }
+if ((val==0x0000) || (val == 0xFFFF))
+{
+ printf("\n\r ------------- ERROR ------------ ");
+ printf("\n\r Cannot read PHY ID register      ");
+ printf("\n\r Check cabling and power supply   ");
+ printf("\n\r -------------------------------- ");
+ printf("\n\r");
+ return(-1);
+}
 
 
 while(phy_regs[k].addr!=999)
     {
-        mdioReg = mdioReadRegister(0,k);
+        mdioReg = mdioReadRegister(PHY_Address,phy_regs[k].addr);
         printf("\n\r PHY Reg %d  \t%s = 0x%.4X",phy_regs[k].addr,phy_regs[k].name,mdioReg);
         k++;
     }
@@ -371,35 +424,55 @@ int dispatchEthPhyRegister  (int argc, char *argv[])
     unsigned int mdioReg = 0;
     unsigned int val = 0;
 
-    mdioReg = 1;
-    val = mdioReadRegister(0,mdioReg);
+    mdioReg = 0;
+    val = mdioReadRegister(PHY_Address,mdioReg);
+    printf("\n\r read PHY Basic Control Register %d = 0x%X",mdioReg,val);
 
+
+    mdioReg = 1;
+    val = mdioReadRegister(PHY_Address,mdioReg);
     printf("\n\r read PHY Basic Status Register %d = 0x%X",mdioReg,val);
 
-    if (val%0x0004) {
-        printf("\n\r Link Up ");
+    if ((val&0x0004)==0x0004) {
+        printf("\n\r ## Link is Up ");
     }
     else {
-        printf("\n\r Link Down ");
+        printf("\n\r ## Link is Down ");
     }
 
 
     mdioReg = 17;
-    val = mdioReadRegister(0,mdioReg);
-
+    val = mdioReadRegister(PHY_Address,mdioReg);
     printf("\n\r read PHY Extended Control Register %d = 0x%X",mdioReg,val);
 
 
-    mdioReg = 18;
-    val = mdioReadRegister(0,mdioReg);
-
-    printf("\n\r read PHY Configuration Register #1  %d = 0x%X",mdioReg,val);
-
-    if (val%0x8000) {
-        printf("\n\r PHY is Master ");
+    if ((val&0x8000)==0x8000) {
+        printf("\n\r ## LINK Control enabled ");
     }
     else {
-        printf("\n\r PHY is Slave ");
+        printf("\n\r ## LINK Control disabled ");
+    }
+
+    mdioReg = 18;
+    val = mdioReadRegister(PHY_Address,mdioReg);
+    printf("\n\r read PHY Configuration Register #1  %d = 0x%X",mdioReg,val);
+
+    if ((val&0x8000)==0x8000) {
+        printf("\n\r ## PHY is Master ");
+    }
+    else {
+        printf("\n\r ## PHY is Slave ");
+    }
+
+    mdioReg = 23;
+    val = mdioReadRegister(PHY_Address,mdioReg);
+    printf("\n\r read PHY Communication Status Register #1  %d = 0x%X",mdioReg,val);
+
+    if ((val&0x8000)==0x8000) {
+        printf("\n\r ## Link is OK ");
+    }
+    else {
+        printf("\n\r ## Link failure ");
     }
 
      return(0);
@@ -421,15 +494,14 @@ int probePhyAddress (int argc, char *argv[])
     for (k=0;k<32;k++)
         {
             mdioReg = mdioReadRegister(k,0);
-            printf("\n\r PHY Address %.2d Reg 0x%.4X",k,mdioReg);
 
             if ((mdioReg==0x0000) || (mdioReg == 0xFFFF))
             {
-                printf(" --- " );
+
             }
             else
             {
-                 printf(" PHY FOUND " );
+            printf("\n\r PHY FOUND at PHY Address %.2d Reg 0x%.4X",k,mdioReg );
             }
         }
 
@@ -450,27 +522,27 @@ int setTestMode  (int argc, char *argv[])
     unsigned int val = 0;
     unsigned int mode;
 
-    mode = atoi(argv[2]);
+    mode = atoi(argv[1]);
 
 
     printf("\n\r Disable Auto OP 15");
 
-    val = mdioReadRegister(0,18);
+    val = mdioReadRegister(PHY_Address,18);
     val = val & ~(0x4000);
-    mdioWriteRegister(0,18,val);
+    mdioWriteRegister(PHY_Address,18,val);
 
     printf("\n\r Disable Link Control Bit 15");
 
-    val = mdioReadRegister(0,17);
+    val = mdioReadRegister(PHY_Address,17);
     val = val & ~(0x8000);
-    mdioWriteRegister(0,17,val);
+    mdioWriteRegister(PHY_Address,17,val);
 
     printf("\n\r enable test mode %d (Bit 6..8) ", mode);
 
-    val = mdioReadRegister(0,17);
+    val = mdioReadRegister(PHY_Address,17);
     val = val & ~(3<<6);
     val = val | (mode<<6);
-    mdioWriteRegister(0,17,val);
+    mdioWriteRegister(PHY_Address,17,val);
 
     return(0);
 }
@@ -490,11 +562,6 @@ int main(int argc, char *argv[])
 
     printf("\n\r MDIO BeagleBone Black 2017");
 
-	for (count = 0; count < argc; count++)
-	{
-		printf("\n\r ARG %d : %s", count, argv[count]);
-	}
-
 	mdioSelectPins(1);
     setupGpioPins();
     mdioInit();
@@ -512,9 +579,8 @@ int main(int argc, char *argv[])
         }
        cmdline[k]='\0';
 
-        //fgets(cmdline,20,stdin);
-        printf("CMD Line: <%s>",cmdline);
-        CmdLineProcess(cmdline);
+       printf("CMD Line: <%s>",cmdline);
+       CmdLineProcess(cmdline);
 
 
     }

@@ -17,8 +17,8 @@
  */
 
 
-PIN MDC_Pin = MDC;
-PIN MDIO_Pin = MDIO;
+PIN MDC_Pin;
+PIN MDIO_Pin;
 
 /***************************************************************//**
  *  \brief select GPIOs used as MDIO and MDC
@@ -155,7 +155,9 @@ for (i=0;i<32;i++)
      mdcClock();
      data = data << 1;
     }
-  mdcClock(); /* FIXME : is this additional clock needed */
+
+setMdioPin(1);
+//  mdcClock(); /* FIXME : is this additional clock needed */
 }
 
 /***************************************************************//**
@@ -197,7 +199,7 @@ for (i=0;i<14;i++)
      mdcClock();
       debug("\n\r %.2d ",i);
 
-     if (digitalRead(MDIO))
+     if (digitalRead(MDIO_Pin))
          {
             debug(" MDI 1  ");
             phyRegister = phyRegister | 1;
@@ -211,7 +213,7 @@ for (i=0;i<14;i++)
 
 
  mdioInit();
- mdcClock(); /* FIXME : is this additional clock needed */
+// mdcClock(); /* FIXME : is this additional clock needed */
  phyRegister = phyRegister >> 1;
 
   setMdioPin(1);
@@ -242,7 +244,7 @@ void mdioWritePreamble()
          setMdioPin(1);
          mdcClock();
         }
-
+   setMdioPin(0);
    debug ("\n\r PREEMBLE done ");
 }
 
@@ -262,6 +264,8 @@ void mdioWriteRegister(uint phyAddr, uint regAddr, uint value )
 {
     uint mdio;
     uint d;
+
+    printf("\n\r mdioWriteRegister %d %d 0x%.4x", phyAddr, regAddr, value);
 
     mdio = 0x50000000; // start, write
 
@@ -308,10 +312,42 @@ uint mdioReadRegister(uint phyAddr, uint regAddr )
 
     value = mdioRead(mdio);
 
+    printf("\n\r mdioReadRegister %d %d 0x%.4x", phyAddr, regAddr, value);
+
     return(value);
+}
+
+
+
+int mdioTestInput()
+
+{
+unsigned int gpio=0;
+int k=0;
+
+
+printf("\n\r mdioTestInput");
+
+mdioInput();
+
+
+    gpio = digitalRead(MDIO_Pin);
+
+    printf("\n\r MDIO reading 0x%.4X",gpio);
+
+    digitalWrite(USR1,gpio);
+
+    for (k=0; k<5; k++)
+    {
+        digitalWrite(USR3,1);
+        usleep(90000);
+
+        digitalWrite(USR3,0);
+        usleep(90000);
+    }
+
 }
 
 /* Close the Doxygen group. */
 /** @} */
-
 

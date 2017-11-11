@@ -9,6 +9,7 @@
 #define ANLP 5      /* 4.2.6  AUTO NEGOTIATION LINK PARTNER ABILITY REGISTER */
 #define ANEX 6      /* 4.2.7  AUTO NEGOTIATION EXPANSION REGISTER */
 #define MCS 17      /* 4.2.8  MODE CONTROL/STATUS REGISTER */
+#define CS 23      /*  4      Communication status register */
 #define PSC 31      /* 4.2.14 PHY SPECIAL CONTROL/STATUS REGISTER */
 
 

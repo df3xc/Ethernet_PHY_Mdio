@@ -8,7 +8,7 @@
 
 #define uint unsigned int
 
-#define PULSE 50 // clock pulse duration
+#define PULSE 150 // clock pulse duration
 
 /* Beagleboard
 
@@ -19,6 +19,12 @@
 
 void mdioInit();
 
+void setMdioPin(uint gpio);
+
+void setMdcPin(uint gpio);
+
+void mdcClock();
+
 void mdioSelectPins(int selection);
 
 void mdioWriteRegister(uint phyAddr, uint regAddr, uint value );
@@ -26,6 +32,8 @@ void mdioWriteRegister(uint phyAddr, uint regAddr, uint value );
 uint mdioReadRegister(uint phyAddr, uint regAddr );
 
 void mdioWritePreamble();
+
+int mdioTestInput();
 
 #endif // __MDIO__
 
