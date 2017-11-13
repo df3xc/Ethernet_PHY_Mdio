@@ -203,6 +203,8 @@ void mdioWritePreamble()
  - regAddr
  - value   :  value written to register
 
+ TJA1100 needs MDIO = 1 in the first TA Cycle
+
 *******************************************************************/
 //
 
@@ -212,7 +214,7 @@ void mdioWriteRegister(uint phyAddr, uint regAddr, uint value )
     uint mdio;
     uint d;
 
-    mdio = 0x50000000; // start, write
+    mdio = 0x50020000; // start, write , firts TA = 1
 
     d =  (phyAddr<<24);
     mdio = mdio | d;
