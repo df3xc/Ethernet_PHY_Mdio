@@ -256,6 +256,8 @@ void mdioWritePreamble()
  - regAddr : address of the register
  - value   : value written to register
 
+ TJA1100 needs MDIO=1 in the first TJA clock cycle
+
 *******************************************************************/
 
 
@@ -267,7 +269,7 @@ void mdioWriteRegister(uint phyAddr, uint regAddr, uint value )
 
     printf("\n\r mdioWriteRegister %d %d 0x%.4x", phyAddr, regAddr, value);
 
-    mdio = 0x50000000; // start, write
+    mdio = 0x50020000; // start, write , first TA=1
 
     d =  (phyAddr<<23);
     mdio = mdio | d;
