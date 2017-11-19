@@ -13,8 +13,8 @@
 
 #define PULSE 50 // clock pulse duration
 
-#define PinMDC 0
-#define PinMDIO 1
+#define PinMDC 1
+#define PinMDIO 0
 
 
 void mdioInit();

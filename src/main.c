@@ -31,6 +31,7 @@
 #endif
 
 #include "cmdline.h"
+#include "system_util.h"
 #include "tja1100.h"
 #include "mdio.h"
 #include "main.h"
@@ -50,22 +51,23 @@
 
 void setupGpioPins();
 void myWait(int ticks);
-int help (int argc, char *argv[]);
-int testCmdLine (int argc, char *argv[]);
 
-int selectMdioPins       (int argc, char *argv[]);
-int enableWriteSmi       (int argc, char *argv[]);
-int readEthPhyRegister   (int argc, char *argv[]);
-int writeEthPhyRegister  (int argc, char *argv[]);
-int dumpEthPhyRegister   (int argc, char *argv[]);
-int displayEthPhyRegister(int argc, char *argv[]);
-int dispatchEthPhyRegister  (int argc, char *argv[]);
-int setPhyAddress        (int argc, char *argv[]);
-int probePhyAddress      (int argc, char *argv[]);
-int setTestMode          (int argc, char *argv[]);
-int mdioReadTest         (int argc, char *argv[]);
-int mdioWriteTest        (int argc, char *argv[]);
-int testInput            (int argc, char *argv[]);
+int help                   (int argc, char *argv[]);
+int testCmdLine            (int argc, char *argv[]);
+int selectMdioPins         (int argc, char *argv[]);
+int enableWriteSmi         (int argc, char *argv[]);
+int readEthPhyRegister     (int argc, char *argv[]);
+int writeEthPhyRegister    (int argc, char *argv[]);
+int dumpEthPhyRegister     (int argc, char *argv[]);
+int displayEthPhyRegister  (int argc, char *argv[]);
+int dispatchEthPhyRegister (int argc, char *argv[]);
+int setPhyAddress          (int argc, char *argv[]);
+int probePhyAddress        (int argc, char *argv[]);
+int setTestMode            (int argc, char *argv[]);
+int mdioReadTest           (int argc, char *argv[]);
+int mdioWriteTest          (int argc, char *argv[]);
+int testInput              (int argc, char *argv[]);
+int boardReset             (int argc, char *argv[]);
 
 
 /*****************************************************************************
@@ -75,16 +77,16 @@ int testInput            (int argc, char *argv[]);
 phy_reg_struct phy_regs[20] =
 
 {
-{0, "Basic control                  "},
-{1, "Basic status                   "},
-{2, "PHY IDENTIFIER 1               "},
-{3, "PHY IDENTIFIER 2               "},
-{4, "AUTO NEG ADVERTISEMENT         "},
-{5, "AUTO NEG LINK PARTNER ABILITY  "},
-{6, "AUTO NEG EXPANSION             "},
-{17,"MODE CONTROL/STATUS            "},
-{18,"Basic status                   "},
-{23,"Communication status           "},
+{0, "Basic control                 "},
+{1, "Basic status                  "},
+{2, "PHY IDENTIFIER 1              "},
+{3, "PHY IDENTIFIER 2              "},
+{4, "AUTO NEG ADVERTISEMENT        "},
+{5, "AUTO NEG LINK PARTNER ABILITY "},
+{6, "AUTO NEG EXPANSION            "},
+{17,"MODE CONTROL/STATUS           "},
+{18,"Basic status                  "},
+{23,"Communication status          "},
 {999,""},
 };
 
@@ -110,6 +112,7 @@ tCmdLineEntry g_sCmdTable[20] =
   {"rep",         mdioReadTest ,          "repeat read <register>"},
   {"wep",         mdioWriteTest ,         "repeat write <register> <value> "},
   {"tin",         testInput ,             "GPIO as input, USR1 Led as output"},
+  {"quit",        boardReset ,            "Reset and start uboot"},
   {0,0,0}
 };
 
@@ -119,6 +122,18 @@ unsigned int PHY_Address = 0;
 **                INTERNAL FUNCTION DEFINITIONS
 *****************************************************************************/
 
+/***************************************************************//**
+** \brief Reset Board and start uboot again
+*******************************************************************/
+
+int boardReset(int argc, char *argv[])
+
+{
+  printf("\n\r ------------ systemReset ----------------\n\r");
+  myWait(20000);
+  swReset();
+  return(0);
+}
 
 /***************************************************************//**
 ** \brief Low level test : set USR1 Led according to input pin state.
@@ -272,7 +287,7 @@ int mdioReadTest (int argc, char *argv[])
     while(1)
     {
         val = mdioReadRegister(PHY_Address,mdioReg);
-        printf("\n\r read PHY Register %d = 0x%.4X \n\r",mdioReg,val);
+        printf("\n\r read PHY Register %d = 0x%x \n\r",mdioReg,val);
         myWait(500);
     }
 
@@ -304,7 +319,7 @@ int mdioWriteTest (int argc, char *argv[])
     while(1)
     {
         mdioWriteRegister(PHY_Address,mdioReg,val);
-        printf("\n\r write PHY Register %d = 0x%.4X \n\r",mdioReg,val);
+        printf("\n\r write PHY Register %d = 0x%x \n\r",mdioReg,val);
         myWait(500);
     }
 
@@ -542,7 +557,7 @@ int probePhyAddress (int argc, char *argv[])
             }
             else
             {
-            printf("\n\r PHY FOUND at PHY Address %.2d Reg 0x%.4X",k,mdioReg );
+            printf("\n\r PHY FOUND at PHY Address %.2d Reg 0x%x",k,mdioReg );
             }
         }
 
@@ -667,6 +682,8 @@ int main(int argc, char *argv[])
        printf("CMD Line: <%s>",cmdline);
 
 #endif
+
+
 
         CmdLineProcess(cmdline);
 
