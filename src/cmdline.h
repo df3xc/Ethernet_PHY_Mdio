@@ -108,7 +108,7 @@ tCmdLineEntry;
 //! This is the command table that must be provided by the application.
 //
 //*****************************************************************************
-extern tCmdLineEntry globalCmdTable[];
+extern tCmdLineEntry g_sCmdTable[];
 
 //*****************************************************************************
 //

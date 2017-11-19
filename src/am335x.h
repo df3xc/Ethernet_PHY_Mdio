@@ -10,6 +10,8 @@
  * See MIT-LICENSE file for more information
  */
 
+/********************** used by Linux Application ************************/
+
 #ifndef _AM335X_H_
 #define _AM335X_H_
 

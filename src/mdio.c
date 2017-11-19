@@ -1,24 +1,35 @@
+#include "config.h"
 
-/**
- * \file  mdio.c
- *
- * \brief Write and read PHY registers via MDIO and MDC.
- */
+#ifdef BAREMETAL
+
+#include "soc_AM335x.h"
+#include "beaglebone.h"
+#include "gpio_v2.h"
+#include "pin_mux.h"
+#include "hw_types.h"
+#include "delay.h"
+#include "consoleUtils.h"
+
+#else
 
 #include <stdio.h>
 #include <unistd.h>
 #include "main.h"
-#include "gpio.h"
+#include "libgpio.h"
 #include "mdio.h"
 
-/**
- * \addtogroup mdio_api
- * @{
- */
+#endif
 
+#include "main.h"
+#include "mdio.h"
 
+#ifdef BAREMETAL
+
+#else
 PIN MDC_Pin;
 PIN MDIO_Pin;
+#endif
+
 
 /***************************************************************//**
  *  \brief select GPIOs used as MDIO and MDC
@@ -35,39 +46,52 @@ if (selection==0)
     {
         printf("\n\r access on-board PHY via MDC and MDIO pins");
 
+#ifdef BAREMETAL
+
+#else
+
         MDC_Pin = MDC;
         MDIO_Pin = MDIO;
+#endif
 
     }
     else
     {
         printf("\n\r access external PHY via Port 8 pins");
+#ifdef BAREMETAL
 
+#else
         MDC_Pin = P8_14;
         MDIO_Pin = P8_13;
 
         printf("\n\r MDC  : %s",MDC_Pin.name);
         printf("\n\r MDIO : %s",MDIO_Pin.name);
+#endif
     }
 }
 
-
 /***************************************************************//**
-  \brief init MDIO and MDC as output
+ \brief init MDIO and MDC as output
 *******************************************************************/
 
 void mdioInit()
 {
   debug ("\n\r MDIO INIT start ");
 
-  debug("\n\r MDC  : %s",MDC_Pin.name);
-  debug("\n\r MDIO : %s",MDIO_Pin.name);
+#ifdef BAREMETAL
+  /* MDIO interface to on-board Ethernet PHY */
 
-  digitalOutput(MDC_Pin );
-  digitalOutput(MDIO_Pin);
-//	digitalWrite(MDC, 0);
-//	digitalWrite((MDIO),1);
-  debug ("\n\r MDIO INIT done ");
+    GPIO0PinMuxSetup(PinMDIO); // MDIO
+    GPIO0PinMuxSetup(PinMDC);  // MDC
+
+    GPIODirModeSet(GPIO0_MODULE,PinMDIO,GPIO_DIR_OUTPUT);
+    GPIODirModeSet(GPIO0_MODULE,PinMDC,GPIO_DIR_OUTPUT);
+#else
+    digitalOutput(MDIO_Pin);
+    digitalOutput(MDC_Pin);
+
+#endif
+
 }
 
 /***************************************************************//**
@@ -75,45 +99,95 @@ void mdioInit()
 *******************************************************************/
 
 void mdioInput()
+
 {
-	digitalInput(MDIO_Pin);
+#ifdef BAREMETAL
+    GPIODirModeSet(GPIO0_MODULE,PinMDIO,GPIO_DIR_INPUT);
+#else
+    digitalInput(MDIO_Pin);
+#endif
     //debug(" MDIO as input ");
+
 }
 
 /***************************************************************//**
-  \brief set MDIO data pin 1 or 0
+ \brief set MDIO data pin 1 or 0
 *******************************************************************/
 
-void setMdioPin(uint value)
+void setMdioPin(int value)
 {
+
+#ifdef BAREMETAL
+
+if (value==0)
+    {
+    //debug("\n\r MDIO 0 ");
+    GPIOPinWrite(GPIO0_MODULE,PinMDIO,GPIO_PIN_LOW);
+    }
+else
+    {
+    //debug("\n\r MDIO 1 ");
+    GPIOPinWrite(GPIO0_MODULE,PinMDIO,GPIO_PIN_HIGH);
+    }
+#else
+
 if (value==0)
     {
     debug(" D0 ");
-	digitalWrite(MDIO_Pin,0);
+    digitalWrite(MDIO_Pin,0);
     }
 else
     {
     debug(" D1 ");
-	digitalWrite(MDIO_Pin, 1);
+    digitalWrite(MDIO_Pin, 1);
     }
+
+#endif
 }
 
 /***************************************************************//**
-  \brief set MDC Clock pin 1 or 0
+ \brief read MDIO data pin
 *******************************************************************/
 
-void setMdcPin(uint value)
+uint getMdioPin()
 {
+#ifdef BAREMETAL
+     return (GPIOPinRead(GPIO0_MODULE,PinMDIO));
+#else
+     return (digitalRead(MDIO_Pin));
+#endif
+}
+
+/***************************************************************//**
+ \brief set MDC Clock pin 1 or 0
+*******************************************************************/
+
+void setMdcPin(int value)
+{
+#ifdef BAREMETAL
+if (value==0)
+    {
+    //debug(" MDC 0 ");
+    GPIOPinWrite(GPIO0_MODULE,PinMDC,GPIO_PIN_LOW);
+    }
+else
+    {
+    //debug(" MDC 1 ");
+    GPIOPinWrite(GPIO0_MODULE,PinMDC,GPIO_PIN_HIGH);
+    }
+#else
 if (value==0)
     {
     debug(" C0 ");
-	  digitalWrite(MDC_Pin, 0);
+      digitalWrite(MDC_Pin, 0);
     }
 else
     {
     debug(" C1 ");
-	  digitalWrite(MDC_Pin, 1);
+      digitalWrite(MDC_Pin, 1);
     }
+
+#endif
 }
 
 /***************************************************************//**
@@ -127,21 +201,21 @@ void mdcClock()
 
 {
  setMdcPin(0);
- usleep(PULSE);
+ myWait(PULSE);
  setMdcPin(1);
- usleep(2*PULSE);
+ myWait(2*PULSE);
  setMdcPin(0);
- usleep(PULSE);
+ myWait(PULSE);
 }
 
 /***************************************************************//**
-  \brief write data using GPIO pins MDIO and MDC
+ \brief write data using GPIO pins MDIO and MDC
 *******************************************************************/
 
-void mdioWrite(uint data)
+void mdioWrite(int data)
 {
-uint i;
-uint gpio;
+int i;
+int gpio;
 
 mdioInit();
 
@@ -149,35 +223,32 @@ mdioWritePreamble();
 
 for (i=0;i<32;i++)
     {
-     debug("\n\r %d ",i);
      gpio=data & 0x80000000;
      setMdioPin(gpio);
      mdcClock();
      data = data << 1;
     }
 
-setMdioPin(1);
-//  mdcClock(); /* FIXME : is this additional clock needed */
 }
 
 /***************************************************************//**
-  \brief read data using GPIO pins MDIO and MDC
+ \brief write data using GPIO pins MDIO and MDC
 *******************************************************************/
 
-uint mdioRead(uint data)
+int mdioRead(int data)
 {
-uint i;
-uint gpio = 0;
-uint phyRegister = 0;
+int i;
+int gpio = 0;
+int phyRegister = 0;
 
 mdioInit();
 
 mdioWritePreamble();
 
+//ConsoleUtilsPrintf("\n\r Mdio read ... ");
 
 for (i=0;i<14;i++)
     {
-     debug("\n\r %.2d ",i);
      gpio=data & 0x80000000;
      setMdioPin(gpio);
      mdcClock();
@@ -197,27 +268,29 @@ for (i=0;i<14;i++)
  for (i=0;i<16;i++)
     {
      mdcClock();
-      debug("\n\r %.2d ",i);
 
-     if (digitalRead(MDIO_Pin))
+     if (getMdioPin())
          {
-            debug(" MDI 1  ");
+            //debug("\n\r MDIO is high");
             phyRegister = phyRegister | 1;
          }
      else
          {
-            debug(" MDI 0 ");
+            //debug("\n\r MDIO is low");
          }
      phyRegister = phyRegister << 1;
     }
 
-
- mdioInit();
-// mdcClock(); /* FIXME : is this additional clock needed */
  phyRegister = phyRegister >> 1;
 
-  setMdioPin(1);
-  usleep(500);
+ mdioInit();
+ setMdioPin(1);
+ mdcClock();
+ mdcClock();
+ mdcClock();
+
+
+
 
 //ConsoleUtilsPrintf(" result: 0x%04X",phyRegister );
 
@@ -227,25 +300,22 @@ return(phyRegister);
 
 
 /***************************************************************//**
-  \brief write MDIO preamble (32 time MDIO = 1)
+ \brief write MDIO preamble (32 time MDIO = 1)
 *******************************************************************/
 
 
 void mdioWritePreamble()
 
 {
-    uint i=0;
+    int i=0;
 
-    debug ("\n\r PREEMBLE start");
+    mdioInit();
 
     for (i=0;i<32;i++)
         {
-         debug("\n\r %.2d ",i);
          setMdioPin(1);
          mdcClock();
         }
-   setMdioPin(0);
-   debug ("\n\r PREEMBLE done ");
 }
 
 
@@ -260,12 +330,11 @@ void mdioWritePreamble()
 
 *******************************************************************/
 
-
 void mdioWriteRegister(uint phyAddr, uint regAddr, uint value )
 
 {
-    uint mdio;
-    uint d;
+    unsigned int mdio;
+    unsigned int d;
 
     printf("\n\r mdioWriteRegister %d %d 0x%.4x", phyAddr, regAddr, value);
 
@@ -296,15 +365,14 @@ void mdioWriteRegister(uint phyAddr, uint regAddr, uint value )
 
 *******************************************************************/
 
-
 uint mdioReadRegister(uint phyAddr, uint regAddr )
 
 {
-    uint mdio;
-    uint d;
-    uint value;
+    int mdio;
+    int d;
+    int value;
 
-    mdio = 0x60000000; // start, write
+    mdio = 0x60020000; // start, read
 
     d =  (phyAddr<<23);
     mdio = mdio | d;
@@ -314,12 +382,14 @@ uint mdioReadRegister(uint phyAddr, uint regAddr )
 
     value = mdioRead(mdio);
 
-    printf("\n\r mdioReadRegister %d %d 0x%.4x", phyAddr, regAddr, value);
+    // Caution : setting width for a number does not work
+    //           using starterware library
+    //           0x%.4x must be set to 0x%x
+
+    printf ("\n\r mdioReadRegister %d %d 0x%x", phyAddr, regAddr, value);
 
     return(value);
 }
-
-
 
 int mdioTestInput()
 
@@ -333,7 +403,11 @@ printf("\n\r mdioTestInput");
 mdioInput();
 
 
-    gpio = digitalRead(MDIO_Pin);
+#ifdef BAREMETAL
+
+#else
+
+    gpio = getMdioPin();
 
     printf("\n\r MDIO reading 0x%.4X",gpio);
 
@@ -347,9 +421,10 @@ mdioInput();
         digitalWrite(USR3,0);
         usleep(90000);
     }
+#endif
+
+    return(0);
 
 }
 
-/* Close the Doxygen group. */
-/** @} */
 

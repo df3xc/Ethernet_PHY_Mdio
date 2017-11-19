@@ -6,9 +6,30 @@
  */
 
 
+#include "config.h"
+
+#ifdef BAREMETAL
 #include <stdio.h>
 #include <string.h>
-#include "gpio.h"
+#include "soc_AM335x.h"
+#include "beaglebone.h"
+#include "gpio_v2.h"
+#include "pin_mux.h"
+#include "hw_types.h"
+#include "delay.h"
+#include "consoleUtils.h"
+#include "convert.h"
+
+
+#else
+
+#include <stdio.h>
+#include <string.h>
+#include "am335x.h"
+#include "libgpio.h"
+
+#endif
+
 #include "cmdline.h"
 #include "tja1100.h"
 #include "mdio.h"
@@ -28,6 +49,7 @@
 *****************************************************************************/
 
 void setupGpioPins();
+void myWait(int ticks);
 int help (int argc, char *argv[]);
 int testCmdLine (int argc, char *argv[]);
 
@@ -66,7 +88,12 @@ phy_reg_struct phy_regs[20] =
 {999,""},
 };
 
-tCmdLineEntry globalCmdTable[] =
+/*****************************************************************************
+**                COMMAND LINE TABLE of COMMANDS
+*****************************************************************************/
+
+
+tCmdLineEntry g_sCmdTable[20] =
 {
   {"help",        help,                   "provide help"},
   {"cmdline",     testCmdLine,            "test command line processing"},
@@ -101,6 +128,8 @@ int testInput(int argc, char *argv[])
 
 {
 mdioTestInput();
+
+return(0);
 }
 
 /***************************************************************//**
@@ -111,7 +140,7 @@ mdioTestInput();
 int help (int argc, char *argv[])
 {
 
-    tCmdLineEntry *pCmdEntry = &globalCmdTable[0];
+    tCmdLineEntry *pCmdEntry = &g_sCmdTable[0];
 
     printf("\n\r ----------------------- HELP ------------------------");
     printf("\n\r <...> are the command line parameters");
@@ -142,6 +171,8 @@ int selectMdioPins  (int argc, char *argv[])
     mdioSelectPins(selection);
 
     mdioInit();
+
+    return (0);
 
 }
 
@@ -197,7 +228,7 @@ printf ("\n\r");
 int testCmdLine (int argc, char *argv[])
 {
     int k = 0;
-    int a = 0;
+    unsigned int a = 0;
 
     printf("\n\r ----------- Test Command Line ------------");
 
@@ -242,7 +273,7 @@ int mdioReadTest (int argc, char *argv[])
     {
         val = mdioReadRegister(PHY_Address,mdioReg);
         printf("\n\r read PHY Register %d = 0x%.4X \n\r",mdioReg,val);
-        usleep(5000);
+        myWait(500);
     }
 
     return(0);
@@ -267,13 +298,14 @@ int mdioWriteTest (int argc, char *argv[])
 
 
     mdioReg = atoi(argv[1]);
+
     sscanf(argv[2],"%X",&val);
 
     while(1)
     {
         mdioWriteRegister(PHY_Address,mdioReg,val);
         printf("\n\r write PHY Register %d = 0x%.4X \n\r",mdioReg,val);
-        usleep(5000);
+        myWait(500);
     }
 
     return(0);
@@ -295,12 +327,15 @@ int enableWriteSmi (int argc, char *argv[])
     val = val | 0x4;
     mdioWriteRegister(PHY_Address,MCS,val);
 
+    return(0);
+
 }
 
 
 /***************************************************************//**
 *  \brief write Ethernet PHY register
 *******************************************************************/
+
 
 int writeEthPhyRegister  (int argc, char *argv[])
 
@@ -315,13 +350,20 @@ int writeEthPhyRegister  (int argc, char *argv[])
 
 	mdioReg = atoi(argv[1]);
 
+#ifdef BAREMETAL
+
+    val=atoi(argv[2]);
+
+#else
+
     sscanf(argv[2],"%X",&val);
+
+#endif // BAREMETAL
 
 
     printf("\n\r write PHY Register %d = 0x%X",mdioReg,val);
-	mdioWritePreamble();
     mdioWriteRegister(PHY_Address,mdioReg,val);
-    usleep(20000);
+
     val = mdioReadRegister(PHY_Address,mdioReg);
     printf("\n\r read PHY Register %d = 0x%X \n\r",mdioReg,val);
 
@@ -346,7 +388,7 @@ int readEthPhyRegister  (int argc, char *argv[])
     mdioReg= atoi(argv[1]);
 
     val = mdioReadRegister(PHY_Address,mdioReg);
-    printf("\n\r read PHY Register %d = 0x%.4X \n\r",mdioReg,val);
+    printf("\n\r read PHY Register %d = 0x%X",mdioReg,val);
 
     return(0);
 }
@@ -356,25 +398,22 @@ int readEthPhyRegister  (int argc, char *argv[])
 *  \brief read Ethernet PHY register
 *******************************************************************/
 
+
 int dumpEthPhyRegister  (int argc, char *argv[])
 
 {
     unsigned int  k = 0;
     unsigned int mdioReg;
 
-    digitalWrite(P8_19,1);
 
 
     for (k=0;k<32;k++)
         {
         mdioReg = mdioReadRegister(PHY_Address,k);
-        printf("\n\r PHY Reg %d = 0x%.4X",k,mdioReg);
+        printf("\n\r PHY Reg %d = 0x%x",k,mdioReg);
         }
 
-    digitalWrite(P8_19,0);
-
     return(0);
-
 }
 
 /***************************************************************//**
@@ -391,7 +430,7 @@ volatile unsigned int mdioReg;
 
 
 val = mdioReadRegister(PHY_Address,PHY_ID2);
-printf("\n\r 0x%.4X val \n\r",val);
+printf("\n\r 0x%x val \n\r",val);
 
 if ((val==0x0000) || (val == 0xFFFF))
 {
@@ -407,10 +446,12 @@ if ((val==0x0000) || (val == 0xFFFF))
 while(phy_regs[k].addr!=999)
     {
         mdioReg = mdioReadRegister(PHY_Address,phy_regs[k].addr);
-        printf("\n\r PHY Reg %d  \t%s = 0x%.4X",phy_regs[k].addr,phy_regs[k].name,mdioReg);
+        printf("\n\r PHY Reg %d  \t%s = 0x%x",phy_regs[k].addr,phy_regs[k].name,mdioReg);
         k++;
     }
 printf ("\n\r");
+
+return(0);
 
 }
 
@@ -479,6 +520,7 @@ int dispatchEthPhyRegister  (int argc, char *argv[])
 
 }
 
+
 /***************************************************************//**
 *  \brief probe for PHY
 *******************************************************************/
@@ -488,7 +530,6 @@ int probePhyAddress (int argc, char *argv[])
     unsigned int  k = 0;
     unsigned int mdioReg;
 
-    digitalWrite(P8_19,1);
 
 
     for (k=0;k<32;k++)
@@ -505,10 +546,7 @@ int probePhyAddress (int argc, char *argv[])
             }
         }
 
-    digitalWrite(P8_19,0);
-
     return(0);
-
 
 }
 
@@ -521,6 +559,11 @@ int setTestMode  (int argc, char *argv[])
 {
     unsigned int val = 0;
     unsigned int mode;
+
+    if(argc<2) {
+        printf("\n\r ERROR : missing arguments ");
+    return(-1);
+    }
 
     mode = atoi(argv[1]);
 
@@ -547,11 +590,11 @@ int setTestMode  (int argc, char *argv[])
     return(0);
 }
 
-
 /***************************************************************//**
 *  \brief The main function. Application starts here.
 *******************************************************************/
 int main(int argc, char *argv[])
+
 
 {
 
@@ -560,15 +603,57 @@ int main(int argc, char *argv[])
     int k;
     char ch;
 
-    printf("\n\r MDIO BeagleBone Black 2017");
+#ifdef BAREMETAL
 
-	mdioSelectPins(1);
+    HWREG(WDOG) = 0xAAAA;
+    myWait(1000);
+    HWREG(WDOG) = 0x5555;
+
+    ConsoleUtilsInit();
+    setupGpioPins();
+    printf("\n\r MDIO bare metal on BeagleBone Black 2017");
+
+#else
+
+    printf("\n\r MDIO Linux App on BeagleBone Black 2017");
+    mdioSelectPins(1);
     setupGpioPins();
     mdioInit();
+
+#endif
+
+
 
 
     while(1)
     {
+
+#ifdef BAREMETAL
+
+        /* Driving a logic HIGH on the GPIO pin. */
+        GPIOPinWrite(GPIO1_MODULE, USR_LED0, GPIO_PIN_HIGH);
+        GPIOPinWrite(GPIO1_MODULE, USR_LED2, GPIO_PIN_HIGH);
+
+        GPIOPinWrite(GPIO2_MODULE, G2_P8_8,  GPIO_PIN_HIGH);
+        GPIOPinWrite(GPIO0_MODULE, G0_P8_13, GPIO_PIN_HIGH);
+        GPIOPinWrite(GPIO0_MODULE, G0_P8_14, GPIO_PIN_HIGH);
+
+        printf("\n\r -> ");
+
+        count++;
+
+        ConsoleUtilsGets(cmdline,100);
+
+        /* Driving a logic LOW on the GPIO pin. */
+        GPIOPinWrite(GPIO1_MODULE, USR_LED0, GPIO_PIN_LOW);
+        GPIOPinWrite(GPIO1_MODULE, USR_LED2, GPIO_PIN_LOW);
+
+        GPIOPinWrite(GPIO2_MODULE, G2_P8_8,  GPIO_PIN_LOW);
+        GPIOPinWrite(GPIO0_MODULE, G0_P8_13, GPIO_PIN_LOW);
+        GPIOPinWrite(GPIO0_MODULE, G0_P8_14, GPIO_PIN_LOW);
+
+#else
+
         k=0;
         printf("\n\r->");
 
@@ -580,8 +665,10 @@ int main(int argc, char *argv[])
        cmdline[k]='\0';
 
        printf("CMD Line: <%s>",cmdline);
-       CmdLineProcess(cmdline);
 
+#endif
+
+        CmdLineProcess(cmdline);
 
     }
 
@@ -589,23 +676,93 @@ int main(int argc, char *argv[])
 
 /***************************************************************//**
 *******************************************************************/
-
 void setupGpioPins()
 
 {
     printf("\n\r setup GPIO pins ... ");
 
+#ifdef BAREMETAL
+
+    /* Enabling functional clocks for GPIO1 instance. */
+    GPIO1ModuleClkConfig();
+
     /* define pins as GPIO */
 
- 	digitalOutput(USR0);
-	digitalOutput(USR1);
+    GpioPinMuxSetup(GPIO_1_21, 7); // use pin as GPIO1_21 : Led USR0
+    GpioPinMuxSetup(GPIO_1_22, 7); // use pin as GPIO1_22 : Led USR1
+    GpioPinMuxSetup(GPIO_1_23, 7); // use pin as GPIO1_23 : Led USR2
+    GpioPinMuxSetup(GPIO_1_24, 7); // use pin as GPIO1_24 : Led USR3
+
+    /* Expansion header P8 */
+
+    GPIO1PinMuxSetup(G1_P8_5);  // P8 Header Pin 5 as GPIO
+    GPIO1PinMuxSetup(G1_P8_6);  // P8 Header Pin 6 as GPIO
+    GPIO2PinMuxSetup(G2_P8_7);  // P8 Header Pin 7 as GPIO
+    GPIO2PinMuxSetup(G2_P8_8);  // P8 Header Pin 8 as GPIO
+    GPIO2PinMuxSetup(G2_P8_9);  // P8 Header Pin 9 as GPIO
+    GPIO2PinMuxSetup(G2_P8_10); // P8 Header Pin 10 as GPIO
+    GPIO1PinMuxSetup(G1_P8_11); // P8 Header Pin 11 as GPIO
+    GPIO1PinMuxSetup(G1_P8_12); // P8 Header Pin 12 as GPIO
+    GPIO0PinMuxSetup(G0_P8_13); // P8 Header Pin 13 as GPIO
+    GPIO0PinMuxSetup(G0_P8_14); // P8 Header Pin 14 as GPIO
+
+    /* MDIO interface to on-board Ethernet PHY */
+
+    GPIO0PinMuxSetup(0); // MDIO
+    GPIO0PinMuxSetup(1); // MDC
+
+//    /* Enabling the GPIO module. */
+//    GPIOModuleEnable(GPIO1_MODULE);
+//    GPIOModuleEnable(GPIO0_MODULE);
+//
+//    /* Resetting the GPIO module. */
+//    GPIOModuleReset(GPIO1_MODULE);
+//    GPIOModuleReset(GPIO0_MODULE);
+
+    /* Setting the USR LED as an output pins */
+    GPIODirModeSet(GPIO1_MODULE,USR_LED0,GPIO_DIR_OUTPUT);
+    GPIODirModeSet(GPIO1_MODULE,USR_LED1,GPIO_DIR_OUTPUT);
+    GPIODirModeSet(GPIO1_MODULE,USR_LED2,GPIO_DIR_OUTPUT);
+    GPIODirModeSet(GPIO1_MODULE,USR_LED3,GPIO_DIR_OUTPUT);
+
+    printf("\n\r Set GPIO pins as OUTPUT/INPUT ... ");
+
+    GPIODirModeSet(GPIO2_MODULE, G2_P8_8, GPIO_DIR_OUTPUT);
+    GPIODirModeSet(GPIO2_MODULE, G2_P8_7, GPIO_DIR_INPUT);
+
+    GPIODirModeSet(GPIO0_MODULE, G0_P8_13, GPIO_DIR_OUTPUT);
+    GPIODirModeSet(GPIO0_MODULE, G0_P8_14, GPIO_DIR_OUTPUT);
+
+#else
+
+    /* define pins as GPIO */
+
+    digitalOutput(USR0);
+    digitalOutput(USR1);
     digitalOutput(USR2);
-	digitalOutput(USR3);
-	digitalOutput(P8_19);
+    digitalOutput(USR3);
+    digitalOutput(P8_19);
+#endif
 
     printf(" DONE ");
 
 }
+
+/*
+ * wait about 0.5 milliseconds (not yet calibrated)
+ */
+
+void myWait(int ticks)
+{
+  volatile int a;
+
+  ticks=ticks*100;
+  while(ticks>0)
+      {
+       ticks--;
+       a = a + 1;
+      }
+  }
 
 
 

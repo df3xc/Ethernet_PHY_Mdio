@@ -1,6 +1,6 @@
 
 #include "main.h"
-#include "gpio.h"
+#include "libgpio.h"
 #include "mdio.h"
 
 
@@ -146,15 +146,15 @@ for (i=0;i<14;i++)
             debug("\n\r MD0");
          }
       phyRegister = phyRegister << 1;
-    
-     
+
+
     }
 
  mdioInit();
  setMdioPin(1);
   mdcClock();
  mdcClock();
- 
+
 
 
 phyRegister = phyRegister >> 1;

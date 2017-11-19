@@ -132,7 +132,7 @@ int CmdLineProcess(char *pcCmdLine)
     {
         /* Start at the beginning of the command table, to look for a matching
          * command. */
-        pCmdEntry = &globalCmdTable[0];
+        pCmdEntry = &g_sCmdTable[0];
 
         /* Search through the command table until a null command string is
          * found, which marks the end of the table. */

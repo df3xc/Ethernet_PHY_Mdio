@@ -1,27 +1,29 @@
 #ifndef __MDIO__
 #define __MDIO__
 
-//#define debug(format, args...) printf (format, ## args)
+//#include "consoleUtils.h"
+
+//#define debug(format, args...) printf (stderr, format, ## args)
 //#define debug(format, args...) ConsoleUtilsPrintf (format, ## args)
 #define debug(format, args...)
 
+#define printf(format, args...) ConsoleUtilsPrintf (format, ## args)
 
 #define uint unsigned int
 
-#define PULSE 150 // clock pulse duration
+#define PULSE 50 // clock pulse duration
 
-/* Beagleboard
-
-    MDIO GPIO 0.0
-    MDC  GPIO 0.1
-*/
+#define PinMDC 0
+#define PinMDIO 1
 
 
 void mdioInit();
 
-void setMdioPin(uint gpio);
+void setMdioPin(int value);
 
-void setMdcPin(uint gpio);
+void setMdcPin(int value);
+
+uint getMdioPin();
 
 void mdcClock();
 
