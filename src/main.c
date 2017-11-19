@@ -95,7 +95,7 @@ phy_reg_struct phy_regs[20] =
 *****************************************************************************/
 
 
-tCmdLineEntry g_sCmdTable[20] =
+tCmdLineEntry g_sCmdTable[25] =
 {
   {"help",        help,                   "provide help"},
   {"cmdline",     testCmdLine,            "test command line processing"},
@@ -112,7 +112,7 @@ tCmdLineEntry g_sCmdTable[20] =
   {"rep",         mdioReadTest ,          "repeat read <register>"},
   {"wep",         mdioWriteTest ,         "repeat write <register> <value> "},
   {"tin",         testInput ,             "GPIO as input, USR1 Led as output"},
-  {"quit",        boardReset ,            "Reset and start uboot"},
+  {"ex",          boardReset ,            "Reset and start uboot"},
   {0,0,0}
 };
 
