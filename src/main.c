@@ -98,7 +98,7 @@ phy_reg_struct phy_regs[20] =
 tCmdLineEntry g_sCmdTable[25] =
 {
   {"help",        help,                   "provide help"},
-  {"cmdline",     testCmdLine,            "test command line processing"},
+  {"cmd",         testCmdLine,            "test command line processing"},
   {"padr",        setPhyAddress,          "set PHY <address>"},
   {"swe",         enableWriteSmi,         "enable SWI write "},
   {"dump",        dumpEthPhyRegister,     "dump Ethernet PHY register 0..31"},
@@ -637,14 +637,12 @@ int main(int argc, char *argv[])
 
 #endif
 
-
-
-
-    while(1)
+    while(cmdline[0]!='q')
     {
 
 #ifdef BAREMETAL
 
+#ifdef BEAGLE
         /* Driving a logic HIGH on the GPIO pin. */
         GPIOPinWrite(GPIO1_MODULE, USR_LED0, GPIO_PIN_HIGH);
         GPIOPinWrite(GPIO1_MODULE, USR_LED2, GPIO_PIN_HIGH);
@@ -652,6 +650,7 @@ int main(int argc, char *argv[])
         GPIOPinWrite(GPIO2_MODULE, G2_P8_8,  GPIO_PIN_HIGH);
         GPIOPinWrite(GPIO0_MODULE, G0_P8_13, GPIO_PIN_HIGH);
         GPIOPinWrite(GPIO0_MODULE, G0_P8_14, GPIO_PIN_HIGH);
+#endif // BEAGLE
 
         printf("\n\r -> ");
 
@@ -659,6 +658,7 @@ int main(int argc, char *argv[])
 
         ConsoleUtilsGets(cmdline,100);
 
+#ifdef BEAGLE
         /* Driving a logic LOW on the GPIO pin. */
         GPIOPinWrite(GPIO1_MODULE, USR_LED0, GPIO_PIN_LOW);
         GPIOPinWrite(GPIO1_MODULE, USR_LED2, GPIO_PIN_LOW);
@@ -666,9 +666,9 @@ int main(int argc, char *argv[])
         GPIOPinWrite(GPIO2_MODULE, G2_P8_8,  GPIO_PIN_LOW);
         GPIOPinWrite(GPIO0_MODULE, G0_P8_13, GPIO_PIN_LOW);
         GPIOPinWrite(GPIO0_MODULE, G0_P8_14, GPIO_PIN_LOW);
+#endif // BEAGLE
 
 #else
-
         k=0;
         printf("\n\r->");
 
@@ -682,8 +682,6 @@ int main(int argc, char *argv[])
        printf("CMD Line: <%s>",cmdline);
 
 #endif
-
-
 
         CmdLineProcess(cmdline);
 
@@ -705,6 +703,7 @@ void setupGpioPins()
 
     /* define pins as GPIO */
 
+#ifdef BEAGLE
     GpioPinMuxSetup(GPIO_1_21, 7); // use pin as GPIO1_21 : Led USR0
     GpioPinMuxSetup(GPIO_1_22, 7); // use pin as GPIO1_22 : Led USR1
     GpioPinMuxSetup(GPIO_1_23, 7); // use pin as GPIO1_23 : Led USR2
@@ -722,6 +721,7 @@ void setupGpioPins()
     GPIO1PinMuxSetup(G1_P8_12); // P8 Header Pin 12 as GPIO
     GPIO0PinMuxSetup(G0_P8_13); // P8 Header Pin 13 as GPIO
     GPIO0PinMuxSetup(G0_P8_14); // P8 Header Pin 14 as GPIO
+#endif // BEAGLE
 
     /* MDIO interface to on-board Ethernet PHY */
 
@@ -736,6 +736,8 @@ void setupGpioPins()
 //    GPIOModuleReset(GPIO1_MODULE);
 //    GPIOModuleReset(GPIO0_MODULE);
 
+
+#ifdef BEAGLE
     /* Setting the USR LED as an output pins */
     GPIODirModeSet(GPIO1_MODULE,USR_LED0,GPIO_DIR_OUTPUT);
     GPIODirModeSet(GPIO1_MODULE,USR_LED1,GPIO_DIR_OUTPUT);
@@ -749,6 +751,7 @@ void setupGpioPins()
 
     GPIODirModeSet(GPIO0_MODULE, G0_P8_13, GPIO_DIR_OUTPUT);
     GPIODirModeSet(GPIO0_MODULE, G0_P8_14, GPIO_DIR_OUTPUT);
+#endif // BEAGLE
 
 #else
 
