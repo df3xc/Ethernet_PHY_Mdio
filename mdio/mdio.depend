@@ -1,0 +1,68 @@
+# depslib dependency file v1.0
+1510290283 source:f:\onedrive\beaglebone\ethernet_phy_mdio\src\cmdline.c
+	<stdio.h>
+	<string.h>
+	"cmdline.h"
+
+1510290284 f:\onedrive\beaglebone\ethernet_phy_mdio\src\cmdline.h
+
+1511045577 source:f:\onedrive\beaglebone\ethernet_phy_mdio\src\main.c
+	"config.h"
+	<stdio.h>
+	<string.h>
+	"soc_AM335x.h"
+	"beaglebone.h"
+	"gpio_v2.h"
+	"pin_mux.h"
+	"hw_types.h"
+	"delay.h"
+	"consoleUtils.h"
+	"convert.h"
+	<stdio.h>
+	<string.h>
+	"libgpio.h"
+	"cmdline.h"
+	"tja1100.h"
+	"mdio.h"
+	"main.h"
+
+1511134046 f:\onedrive\beaglebone\ethernet_phy_mdio\src\config.h
+
+1511004064 f:\onedrive\beaglebone\ethernet_phy_mdio\src\convert.h
+
+1511091952 f:\onedrive\beaglebone\ethernet_phy_mdio\src\libgpio.h
+	<stdio.h>
+	<stdlib.h>
+	<sys/types.h>
+	<sys/stat.h>
+	<stdint.h>
+	<fcntl.h>
+	"am335x.h"
+	<unistd.h>
+
+1511091936 f:\onedrive\beaglebone\ethernet_phy_mdio\src\am335x.h
+
+1510596234 f:\onedrive\beaglebone\ethernet_phy_mdio\src\tja1100.h
+
+1511098821 f:\onedrive\beaglebone\ethernet_phy_mdio\src\mdio.h
+
+1511085787 f:\onedrive\beaglebone\ethernet_phy_mdio\src\main.h
+	"soc_AM335x.h"
+
+1510300359 source:f:\onedrive\beaglebone\ethernet_phy_mdio\src\mdio.c
+	"config.h"
+	"soc_AM335x.h"
+	"beaglebone.h"
+	"gpio_v2.h"
+	"pin_mux.h"
+	"hw_types.h"
+	"delay.h"
+	"consoleUtils.h"
+	<stdio.h>
+	<unistd.h>
+	"main.h"
+	"libgpio.h"
+	"mdio.h"
+	"main.h"
+	"mdio.h"
+
